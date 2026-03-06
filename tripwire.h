@@ -16,14 +16,14 @@
 #define memmove(d, s, l) tripwire_memmove(d, s, l, __FILE__, __LINE__)
 #define free(p) tripwire_free(p, __FILE__, __LINE__)
 
-void *tripwire_malloc(size_t, char *, int);
-void *tripwire_realloc(void *, size_t, char *, int);
-void *tripwire_calloc(size_t, size_t, char *, int);
-char *tripwire_strdup(const char *, char *, int);
-void *tripwire_memset(void *, int, size_t, char *, int);
-void *tripwire_memcpy(void *, const void *, size_t, char *, int);
-void *tripwire_memmove(void *, const void *, size_t, char *, int);
-void tripwire_free(void *, char *, int);
+void *tripwire_malloc(size_t, const char *, int);
+void *tripwire_realloc(void *, size_t, const char *, int);
+void *tripwire_calloc(size_t, size_t, const char *, int);
+char *tripwire_strdup(const char *, const char *, int);
+void *tripwire_memset(void *, int, size_t, const char *, int);
+void *tripwire_memcpy(void *, const void *, size_t, const char *, int);
+void *tripwire_memmove(void *, const void *, size_t, const char *, int);
+void tripwire_free(void *, const char *, int);
 void tripwire_report(void);
 
 #endif

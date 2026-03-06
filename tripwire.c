@@ -13,7 +13,7 @@ struct tripwire
 
     size_t allocated;
 
-    char *file;
+    const char *file;
     int line;
 
     int freed; // or reallocated
@@ -25,20 +25,20 @@ struct tripwire
 static tripwire *tw_head = NULL;
 static tripwire *tw_tail = NULL;
 
-static void fatal1(char *s, char *file, int line)
+static void fatal1(const char *s, const char *file, int line)
 {
     fprintf(stderr, "File: %s, Line: %d, \n", file, line);
     perror(s);
     exit(1);
 }
 
-static void fatal2(char *s, char *file, int line)
+static void fatal2(const char *s, const char *file, int line)
 {
     fprintf(stderr, "%s: %s: %d\n", s, file, line);
     exit(1);
 }
 
-static void *tripwire_new(char *file, int line)
+static void *tripwire_new(const char *file, int line)
 {
     tripwire *tw = malloc(sizeof(tripwire));
     if (tw == NULL) fatal1("malloc", file, line);
@@ -67,7 +67,7 @@ static void *tripwire_find(void *p)
     return NULL;
 }
 
-void *tripwire_malloc(size_t size, char *file, int line)
+void *tripwire_malloc(size_t size, const char *file, int line)
 {
     tripwire *tw = tripwire_new(file, line);
     tw->alloc = malloc(size + 2 * sizeof tw_sentinel);
@@ -85,11 +85,11 @@ void *tripwire_malloc(size_t size, char *file, int line)
     return tw->public;
 }
 
-void *tripwire_realloc(void *p, size_t size, char *file, int line)
+void *tripwire_realloc(void *p, size_t size, const char *file, int line)
 {
     tripwire *t = tripwire_find(p);
     if (t == NULL)
-	fatal2("realloc()(): NO BLOCK:", file, line);
+	fatal2("realloc(): NO BLOCK:", file, line);
 
     if (memcmp(t->alloc, tw_sentinel, sizeof tw_sentinel) != 0)
 	fprintf(stderr, "SENTINEL 0 cracked in %s at %d\n",
@@ -117,18 +117,26 @@ void *tripwire_realloc(void *p, size_t size, char *file, int line)
     return tw->public;
 }
 
-void tripwire_free(void *p, char *file, int line)
+void tripwire_free(void *p, const char *file, int line)
 {
     tripwire *t = tripwire_find(p);
     if (t == NULL)
-	fatal2("free()(): NO BLOCK:", file, line);
+	fatal2("free(): NO BLOCK:", file, line);
 
     if (t->freed == 1) fatal2("free(): DOUBLE FREE:", file, line);
+
+    if (memcmp(t->alloc, tw_sentinel, sizeof tw_sentinel) != 0)
+	fprintf(stderr, "SENTINEL 0 cracked in %s at %d\n",
+		file, line);
+    if (memcmp(t->public + t->allocated, tw_sentinel, sizeof tw_sentinel) != 0)
+	fprintf(stderr, "SENTINEL 1 cracked in %s at %d\n",
+		file, line);
+
     t->freed = 1;
     free(t->alloc);
 }
 
-void *tripwire_memset(void *p, int c, size_t l, char *file, int line)
+void *tripwire_memset(void *p, int c, size_t l, const char *file, int line)
 {
     tripwire *t = tripwire_find(p);
     if (t == NULL)
@@ -151,14 +159,14 @@ void *tripwire_memset(void *p, int c, size_t l, char *file, int line)
     return memset(p, c, l);
 }
 
-void *tripwire_calloc(size_t nmemb, size_t size, char *file, int line)
+void *tripwire_calloc(size_t nmemb, size_t size, const char *file, int line)
 {
     void *p = tripwire_malloc(nmemb * size, file, line);
     memset(p, 0, nmemb * size);
     return p;
 }
 
-char *tripwire_strdup(const char *s, char *file, int line)
+char *tripwire_strdup(const char *s, const char *file, int line)
 {
     size_t len = strlen(s) + 1;
     char *p = tripwire_malloc(len, file, line);
@@ -166,7 +174,7 @@ char *tripwire_strdup(const char *s, char *file, int line)
     return p;
 }
 
-void *tripwire_memcpy(void *dest, const void *src, size_t l, char *file, int line)
+void *tripwire_memcpy(void *dest, const void *src, size_t l, const char *file, int line)
 {
     tripwire *t = tripwire_find(dest);
     if (t == NULL)
@@ -189,7 +197,7 @@ void *tripwire_memcpy(void *dest, const void *src, size_t l, char *file, int lin
     return memcpy(dest, src, l);
 }
 
-void *tripwire_memmove(void *dest, const void *src, size_t l, char *file, int line)
+void *tripwire_memmove(void *dest, const void *src, size_t l, const char *file, int line)
 {
     tripwire *t = tripwire_find(dest);
     if (t == NULL)

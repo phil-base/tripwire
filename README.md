@@ -1,20 +1,44 @@
 # Tripwire
 
+[![CI](https://github.com/phil-base/tripwire/actions/workflows/ci.yml/badge.svg)](https://github.com/phil-base/tripwire/actions/workflows/ci.yml)
+
 Lightweight C memory debugging wrapper. Include the header and it transparently
 replaces standard allocation and memory functions via preprocessor macros.
 
 No compiler flags, no linking extra libraries, no external tools.
 
-## What It Detects
+## Why Tripwire?
 
-- **Buffer overflows/underflows** -- sentinel bytes before and after each
-  allocation are checked on realloc, free, memset, memcpy, and memmove
-- **Double frees** -- tracked via a flag on each allocation
-- **Invalid pointer operations** -- realloc/free of untracked pointers
-- **memset size mismatches** -- warns when memset size differs from allocation
-- **memcpy/memmove overflows** -- warns when copy size exceeds allocation
-- **Memory leaks** -- `tripwire_report()` walks the allocation list and reports
-  unfreed blocks
+| | Tripwire | ASan | Valgrind | Electric Fence |
+|---|---|---|---|---|
+| Setup | Copy two files | Compiler flag (`-fsanitize=address`) | External binary | Link library |
+| Compiler support | Any C89+ compiler | GCC/Clang only | N/A (runtime) | GCC/Clang |
+| Platform | Anywhere `malloc` works | Linux, macOS, some BSDs | Linux (best), macOS (limited) | Linux |
+| Overhead | Minimal (sentinel bytes) | ~2x slowdown, ~3x memory | ~10-20x slowdown | One page per allocation |
+| Leak detection | Yes (`tripwire_report()`) | Yes | Yes | No |
+| Buffer overflow | Yes (sentinel canaries) | Yes (shadow memory) | Yes | Yes (page guards) |
+| Double free | Yes | Yes | Yes | No |
+| Source location | File and line number | File, line, stack trace | Stack trace | Signal only |
+| Integration | `#include "tripwire.h"` | Rebuild with flag | Run under `valgrind` | Link with `-lefence` |
+
+**Use tripwire when** you want quick, portable memory checks with zero setup
+cost -- especially in environments where ASan or Valgrind aren't available
+(embedded targets, unfamiliar toolchains, quick debugging sessions).
+
+**Use ASan/Valgrind when** you need thorough instrumentation, stack traces, or
+are debugging production-grade software on a supported platform.
+
+## Installation
+
+Copy `tripwire.h` and `tripwire.c` into your project:
+
+```sh
+# As a file copy
+cp tripwire.h tripwire.c /path/to/your/project/
+
+# Or as a git submodule
+git submodule add https://github.com/phil-base/tripwire.git vendor/tripwire
+```
 
 ## Usage
 
@@ -40,6 +64,12 @@ int main(void)
 
 ```sh
 cc -o myprogram myprogram.c tripwire.c
+```
+
+Or use the included Makefile to build and run the test suite:
+
+```sh
+make run
 ```
 
 ## Example Output
@@ -77,7 +107,7 @@ tripwire: 2 leak(s) detected
 | `realloc(p, size)` | Validates pointer, checks sentinels, re-wraps |
 | `calloc(n, size)` | Tracked zero-initialized allocation |
 | `strdup(s)` | Tracked string duplication |
-| `free(p)` | Validates pointer, detects double-free |
+| `free(p)` | Validates pointer, checks sentinels, detects double-free |
 | `memset(p, c, l)` | Checks sentinels and size match |
 | `memcpy(d, s, l)` | Checks sentinels and overflow |
 | `memmove(d, s, l)` | Checks sentinels and overflow |
