@@ -114,4 +114,4 @@ tripwire: 2 leak(s) detected
 
 ## License
 
-BSD 2-Clause. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

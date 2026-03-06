@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: BSD-2-Clause */
+/* SPDX-License-Identifier: MIT */
 #ifndef TRIPWIRE_H
 #define TRIPWIRE_H
 
