@@ -22,6 +22,8 @@ struct tripwire
     tripwire *prev;
 };
 
+void tripwire_free(void *, const char *, int);
+
 static tripwire *tw_head = NULL;
 static tripwire *tw_tail = NULL;
 
@@ -87,6 +89,15 @@ void *tripwire_malloc(size_t size, const char *file, int line)
 
 void *tripwire_realloc(void *p, size_t size, const char *file, int line)
 {
+    if (p == NULL)
+	return tripwire_malloc(size, file, line);
+
+    if (size == 0)
+    {
+	tripwire_free(p, file, line);
+	return NULL;
+    }
+
     tripwire *t = tripwire_find(p);
     if (t == NULL)
 	fatal2("realloc(): NO BLOCK:", file, line);
@@ -119,6 +130,8 @@ void *tripwire_realloc(void *p, size_t size, const char *file, int line)
 
 void tripwire_free(void *p, const char *file, int line)
 {
+    if (p == NULL) return;
+
     tripwire *t = tripwire_find(p);
     if (t == NULL)
 	fatal2("free(): NO BLOCK:", file, line);

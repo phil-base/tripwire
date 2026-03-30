@@ -71,6 +71,22 @@ int main(void)
     free(d);
     fprintf(stderr, "  (ok)\n");
 
+    banner("free(NULL)");
+    free(NULL);
+    fprintf(stderr, "  (ok)\n");
+
+    banner("realloc(NULL, size)");
+    char *rn = realloc(NULL, 32);
+    memset(rn, 'A', 32);
+    free(rn);
+    fprintf(stderr, "  (ok)\n");
+
+    banner("realloc(p, 0)");
+    char *rz = malloc(32);
+    rz = realloc(rz, 0);
+    (void)rz;
+    fprintf(stderr, "  (ok)\n");
+
     banner("memcpy (within bounds)");
     char *e = malloc(16);
     memcpy(e, "hello world", 11);
