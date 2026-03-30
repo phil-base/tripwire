@@ -57,7 +57,8 @@ int main(void)
     // use buf...
     free(buf);
 
-    tripwire_report(); // print any leaks
+    tripwire_report();  // print any leaks
+    tripwire_cleanup(); // free all internal tracking state
     return 0;
 }
 ```
@@ -111,6 +112,13 @@ tripwire: 2 leak(s) detected
 | `memset(p, c, l)` | Checks sentinels and size match |
 | `memcpy(d, s, l)` | Checks sentinels and overflow |
 | `memmove(d, s, l)` | Checks sentinels and overflow |
+
+## Diagnostics
+
+| Function | Purpose |
+|---|---|
+| `tripwire_report()` | Print all unfreed allocations with file and line |
+| `tripwire_cleanup()` | Free all internal tracking state (call after report) |
 
 ## License
 

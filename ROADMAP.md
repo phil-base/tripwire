@@ -59,26 +59,22 @@ portable but the tests are not.
 even though partial `memset()` is often valid. Should be framed as a
 "suspicious usage" warning if kept.
 
-## Phase 1: Standard C compatibility
+## Phase 1: Standard C compatibility (done)
 
-- `free(NULL)` becomes a no-op
-- `realloc(NULL, size)` becomes `malloc(size)`
-- `realloc(p, 0)` gets a defined documented policy
+- ~~`free(NULL)` becomes a no-op~~
+- ~~`realloc(NULL, size)` becomes `malloc(size)`~~
+- ~~`realloc(p, 0)` gets a defined documented policy~~
 - Document behavior for untracked pointers
 
-This moves the tool from prototype to usable drop-in debug helper.
+## Phase 2: Tracker lifecycle cleanup (done)
 
-## Phase 2: Tracker lifecycle cleanup
+Design decision: history mode. Freed nodes stay in the list for double-free
+detection. `tripwire_cleanup()` tears everything down at the end.
 
-Decide on tracking memory strategy:
-
-- Active-only registry, or history/quarantine mode
-
-Then implement:
-
-- Cleanup of tracker nodes and stored filename copies
-- Optional final teardown function (`tripwire_cleanup()`)
-- Clearer policy for freed vs active vs historical records
+- ~~Cleanup of tracker nodes and stored filename copies~~
+- ~~`tripwire_cleanup()` teardown function~~
+- ~~Null out `alloc` on freed nodes to avoid dangling pointers~~
+- ~~Keep `public` pointer as lookup key for double-free detection~~
 
 ## Phase 3: Harden arithmetic and edge cases
 

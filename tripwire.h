@@ -25,5 +25,6 @@ void *tripwire_memcpy(void *, const void *, size_t, const char *, int);
 void *tripwire_memmove(void *, const void *, size_t, const char *, int);
 void tripwire_free(void *, const char *, int);
 void tripwire_report(void);
+void tripwire_cleanup(void);
 
 #endif

@@ -141,5 +141,11 @@ int main(void)
     (void)leaked;
     tripwire_report();
 
+    /* Cleanup -- free all internal tracking state */
+
+    banner("cleanup");
+    tripwire_cleanup();
+    fprintf(stderr, "  (ok)\n");
+
     return 0;
 }

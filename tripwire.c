@@ -147,6 +147,7 @@ void tripwire_free(void *p, const char *file, int line)
 
     t->freed = 1;
     free(t->alloc);
+    t->alloc = NULL;
 }
 
 void *tripwire_memset(void *p, int c, size_t l, const char *file, int line)
@@ -256,4 +257,20 @@ void tripwire_report(void)
 
     if (leaks)
 	fprintf(stderr, "tripwire: %d leak(s) detected\n", leaks);
+}
+
+void tripwire_cleanup(void)
+{
+    tripwire *t = tw_head;
+    while (t != NULL)
+    {
+	tripwire *next = t->next;
+	if (!t->freed)
+	    free(t->alloc);
+	free((void *)t->file);
+	free(t);
+	t = next;
+    }
+    tw_head = NULL;
+    tw_tail = NULL;
 }
