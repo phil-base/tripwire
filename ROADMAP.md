@@ -76,12 +76,13 @@ detection. `tripwire_cleanup()` tears everything down at the end.
 - ~~Null out `alloc` on freed nodes to avoid dangling pointers~~
 - ~~Keep `public` pointer as lookup key for double-free detection~~
 
-## Phase 3: Harden arithmetic and edge cases
+## Phase 3: Harden arithmetic and edge cases (done)
 
-- Overflow checks in `malloc` and `calloc` size arithmetic
-- Tests for zero-size allocations
-- Tests for `NULL` behavior
-- Tests for repeated realloc chains
+- ~~Overflow checks in `malloc`, `calloc`, and `realloc` size arithmetic~~
+- ~~Tests for zero-size allocations (`malloc(0)`)~~
+- ~~Tests for `NULL` behavior (done in Phase 1)~~
+- ~~Tests for repeated realloc chains~~
+- ~~Test for calloc overflow detection~~
 
 ## Phase 4: Project credibility
 

@@ -71,8 +71,11 @@ static void *tripwire_find(void *p)
 
 void *tripwire_malloc(size_t size, const char *file, int line)
 {
+    size_t total = size + 2 * sizeof tw_sentinel;
+    if (total < size) fatal2("malloc(): size overflow", file, line);
+
     tripwire *tw = tripwire_new(file, line);
-    tw->alloc = malloc(size + 2 * sizeof tw_sentinel);
+    tw->alloc = malloc(total);
     if (tw->alloc == NULL) fatal1("malloc", file, line);
 
     tw->file = strdup(file);
@@ -112,8 +115,11 @@ void *tripwire_realloc(void *p, size_t size, const char *file, int line)
     if (t->freed == 1) fatal2("Realloc of freed mem", file, line);
     t->freed = 1;
 
+    size_t total = size + 2 * sizeof tw_sentinel;
+    if (total < size) fatal2("realloc(): size overflow", file, line);
+
     tripwire *tw = tripwire_new(file, line);
-    tw->alloc = realloc(t->alloc, size + 2 * sizeof tw_sentinel);
+    tw->alloc = realloc(t->alloc, total);
     if (tw->alloc == NULL) fatal1("malloc", file, line);
 
     tw->public = tw->alloc + sizeof tw_sentinel;
@@ -175,8 +181,12 @@ void *tripwire_memset(void *p, int c, size_t l, const char *file, int line)
 
 void *tripwire_calloc(size_t nmemb, size_t size, const char *file, int line)
 {
-    void *p = tripwire_malloc(nmemb * size, file, line);
-    memset(p, 0, nmemb * size);
+    if (nmemb && size > (size_t)-1 / nmemb)
+	fatal2("calloc(): size overflow", file, line);
+
+    size_t total = nmemb * size;
+    void *p = tripwire_malloc(total, file, line);
+    memset(p, 0, total);
     return p;
 }
 

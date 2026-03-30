@@ -44,6 +44,13 @@ static void do_free_untracked(void)
     free(&x);
 }
 
+static void do_calloc_overflow(void)
+{
+    /* SIZE_MAX / 2 * 3 overflows */
+    void *p = calloc((size_t)-1 / 2, 3);
+    (void)p;
+}
+
 /* --- Main --- */
 
 int main(void)
@@ -85,6 +92,20 @@ int main(void)
     char *rz = malloc(32);
     rz = realloc(rz, 0);
     (void)rz;
+    fprintf(stderr, "  (ok)\n");
+
+    banner("malloc(0)");
+    char *mz = malloc(0);
+    free(mz);
+    fprintf(stderr, "  (ok)\n");
+
+    banner("realloc chain");
+    char *rc = malloc(4);
+    rc = realloc(rc, 16);
+    rc = realloc(rc, 64);
+    rc = realloc(rc, 256);
+    memset(rc, 'B', 256);
+    free(rc);
     fprintf(stderr, "  (ok)\n");
 
     banner("memcpy (within bounds)");
@@ -133,6 +154,7 @@ int main(void)
 
     run_fatal("double free", do_double_free);
     run_fatal("free untracked pointer", do_free_untracked);
+    run_fatal("calloc overflow", do_calloc_overflow);
 
     /* Leak detection */
 
