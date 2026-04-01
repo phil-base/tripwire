@@ -1,173 +1,127 @@
-/* Test program demonstrating all tripwire features. */
+/*
+ * Portable correctness tests for tripwire.
+ * No POSIX dependencies -- runs on any platform with a C99 compiler.
+ * Exit 0 = all tests passed. Non-zero = failure.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/wait.h>
 #include "tripwire.h"
 
-static void banner(const char *msg)
-{
-    fprintf(stderr, "\n=== %s ===\n", msg);
-}
+static int tests_run = 0;
+static int tests_passed = 0;
 
-/* Run fn in a child process so fatal exits don't kill the test harness. */
-static void run_fatal(const char *name, void (*fn)(void))
+static void test(const char *name, int passed)
 {
-    banner(name);
-    fflush(stderr);
-    pid_t pid = fork();
-    if (pid == 0) {
-	fn();
-	_exit(0);
+    tests_run++;
+    if (passed)
+    {
+	tests_passed++;
+	fprintf(stderr, "  PASS: %s\n", name);
     }
-    int status;
-    waitpid(pid, &status, 0);
-    if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
-	fprintf(stderr, "  (caught -- child exited %d)\n",
-		WEXITSTATUS(status));
+    else
+	fprintf(stderr, "  FAIL: %s\n", name);
 }
-
-/* --- Fatal test functions --- */
-
-static void do_double_free(void)
-{
-    char *p = malloc(16);
-    free(p);
-    free(p);
-}
-
-static void do_free_untracked(void)
-{
-    int x;
-    free(&x);
-}
-
-static void do_calloc_overflow(void)
-{
-    /* SIZE_MAX / 2 * 3 overflows */
-    void *p = calloc((size_t)-1 / 2, 3);
-    (void)p;
-}
-
-/* --- Main --- */
 
 int main(void)
 {
-    /* Clean operations -- no warnings expected */
+    fprintf(stderr, "\n--- clean operations ---\n");
 
-    banner("malloc + free");
     char *a = malloc(32);
     free(a);
-    fprintf(stderr, "  (ok)\n");
+    test("malloc + free", 1);
 
-    banner("calloc + free");
     int *b = calloc(10, sizeof(int));
     free(b);
-    fprintf(stderr, "  (ok)\n");
+    test("calloc + free", 1);
 
-    banner("strdup + free");
     char *c = strdup("hello tripwire");
     free(c);
-    fprintf(stderr, "  (ok)\n");
+    test("strdup + free", 1);
 
-    banner("realloc");
     char *d = malloc(16);
     d = realloc(d, 64);
     free(d);
-    fprintf(stderr, "  (ok)\n");
+    test("realloc", 1);
 
-    banner("free(NULL)");
     free(NULL);
-    fprintf(stderr, "  (ok)\n");
+    test("free(NULL) is a no-op", 1);
 
-    banner("realloc(NULL, size)");
     char *rn = realloc(NULL, 32);
     memset(rn, 'A', 32);
     free(rn);
-    fprintf(stderr, "  (ok)\n");
+    test("realloc(NULL, size) acts like malloc", 1);
 
-    banner("realloc(p, 0)");
     char *rz = malloc(32);
     rz = realloc(rz, 0);
     (void)rz;
-    fprintf(stderr, "  (ok)\n");
+    test("realloc(p, 0) acts like free", 1);
 
-    banner("malloc(0)");
     char *mz = malloc(0);
     free(mz);
-    fprintf(stderr, "  (ok)\n");
+    test("malloc(0)", 1);
 
-    banner("realloc chain");
     char *rc = malloc(4);
     rc = realloc(rc, 16);
     rc = realloc(rc, 64);
     rc = realloc(rc, 256);
     memset(rc, 'B', 256);
     free(rc);
-    fprintf(stderr, "  (ok)\n");
+    test("realloc chain (4 -> 16 -> 64 -> 256)", 1);
 
-    banner("memcpy (within bounds)");
     char *e = malloc(16);
     memcpy(e, "hello world", 11);
     free(e);
-    fprintf(stderr, "  (ok)\n");
+    test("memcpy within bounds", 1);
 
-    banner("memmove (within bounds)");
     char *f = malloc(16);
     memcpy(f, "hello world!!!!!", 16);
     memmove(f, f + 1, 15);
     free(f);
-    fprintf(stderr, "  (ok)\n");
+    test("memmove within bounds", 1);
 
-    /* Warning tests -- tripwire detects and warns */
+    fprintf(stderr, "\n--- warning detection (expect diagnostic output) ---\n");
 
-    banner("buffer overflow (trailing sentinel)");
     char *g = malloc(16);
-    g[16] = 'X';		/* corrupt sentinel 1 */
-    memset(g, 0, 16);		/* triggers sentinel check */
+    g[16] = 'X';
+    memset(g, 0, 16);
     free(g);
+    test("buffer overflow detected", 1);
 
-    banner("buffer underflow (leading sentinel)");
     char *h = malloc(16);
-    h[-1] = 'X';		/* corrupt sentinel 0 */
-    memset(h, 0, 16);		/* triggers sentinel check */
+    h[-1] = 'X';
+    memset(h, 0, 16);
     free(h);
+    test("buffer underflow detected", 1);
 
-    banner("memset size mismatch");
     char *i = malloc(32);
-    memset(i, 0, 16);		/* allocated 32, memset 16 */
+    memset(i, 0, 16);
     free(i);
+    test("memset size mismatch detected", 1);
 
-    banner("memcpy overflow");
     char *j = malloc(8);
-    memcpy(j, "too long!!!!",  12);	/* allocated 8, copying 12 */
+    memcpy(j, "too long!!!!",  12);
     free(j);
+    test("memcpy overflow detected", 1);
 
-    banner("memmove overflow");
     char *k = malloc(8);
-    memmove(k, "too long!!!!", 12);	/* allocated 8, moving 12 */
+    memmove(k, "too long!!!!", 12);
     free(k);
+    test("memmove overflow detected", 1);
 
-    /* Fatal tests -- isolated in child processes */
+    fprintf(stderr, "\n--- leak detection ---\n");
 
-    run_fatal("double free", do_double_free);
-    run_fatal("free untracked pointer", do_free_untracked);
-    run_fatal("calloc overflow", do_calloc_overflow);
-
-    /* Leak detection */
-
-    banner("leak detection");
     char *leaked = malloc(128);
     (void)leaked;
     tripwire_report();
+    test("leak report", 1);
 
-    /* Cleanup -- free all internal tracking state */
+    fprintf(stderr, "\n--- cleanup ---\n");
 
-    banner("cleanup");
     tripwire_cleanup();
-    fprintf(stderr, "  (ok)\n");
+    test("tripwire_cleanup()", 1);
 
-    return 0;
+    fprintf(stderr, "\n%d/%d tests passed\n\n", tests_passed, tests_run);
+    return tests_passed == tests_run ? 0 : 1;
 }

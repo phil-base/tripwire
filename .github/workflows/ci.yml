@@ -21,4 +21,4 @@ jobs:
       - name: Build and run tests
         env:
           CC: ${{ matrix.cc }}
-        run: make run
+        run: make run-all

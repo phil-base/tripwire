@@ -120,6 +120,23 @@ tripwire: 2 leak(s) detected
 | `tripwire_report()` | Print all unfreed allocations with file and line |
 | `tripwire_cleanup()` | Free all internal tracking state (call after report) |
 
+## Limitations
+
+- **Not thread-safe.** The internal allocation list has no locking. Use
+  tripwire in single-threaded programs or single-threaded test harnesses.
+- **Sentinel-based detection only.** Tripwire uses 4-byte canary values before
+  and after each allocation. It catches overwrites that hit these bytes but
+  cannot detect arbitrary out-of-bounds access the way ASan's shadow memory can.
+- **No stack or global checking.** Only heap allocations (`malloc`, `calloc`,
+  `realloc`, `strdup`) are tracked. Stack buffer overflows and global variable
+  issues are invisible to tripwire.
+- **`memset` size mismatch is a heuristic.** Tripwire warns when the `memset`
+  size differs from the allocation size. Partial `memset` on a buffer is valid C
+  but will trigger a warning.
+- **Tracker metadata grows over the lifetime of the program.** Freed allocation
+  records are kept for double-free detection. Call `tripwire_cleanup()` at
+  program exit to release them.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

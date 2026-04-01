@@ -84,12 +84,13 @@ detection. `tripwire_cleanup()` tears everything down at the end.
 - ~~Tests for repeated realloc chains~~
 - ~~Test for calloc overflow detection~~
 
-## Phase 4: Project credibility
+## Phase 4: Project credibility (done)
 
-- Separate demo tests from correctness tests
-- Add portable test runner (no fork dependency)
-- Add a "Limitations" section in the README
-- Add examples showing where tripwire helps and where it does not
+- ~~Separate portable correctness tests (`test.c`) from POSIX fatal tests (`test_fatal.c`)~~
+- ~~Portable test runner with PASS/FAIL counts and exit code~~
+- ~~`make run` for portable tests, `make run-all` for full suite~~
+- ~~"Limitations" section in README~~
+- ~~CI runs both test suites~~
 
 ## Phase 5: Positioning and optional features
 
